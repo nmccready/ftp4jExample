@@ -34,12 +34,14 @@ object Dependencies {
 
   val compileDeps: Seq[ModuleID] = Seq(
     "junit" % "junit" % V.junit,
-    "org.slf4j" % "slf4j-api" % V.slf4j
+    "org.slf4j" % "slf4j-api" % V.slf4j,
+    "org.specs2" %% "specs2" % V.specs2
   )
 
   val testDeps: Seq[ModuleID] = Seq(
     "org.slf4j" % "slf4j-api" % V.slf4j,
-    "ch.qos.logback" % "logback-classic" % V.logback
+    "ch.qos.logback" % "logback-classic" % V.logback,
+    "org.specs2" %% "specs2" % V.specs2
   )
 
   def withOld(namespace: String, version: String): String = appendAll(namespace, "_", version)
