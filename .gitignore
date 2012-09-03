@@ -1,0 +1,24 @@
+logs
+project/project
+project/target
+target
+tmp
+.history
+dist
+prod-dist
+.idea
+.idea_modules
+*.iml
+
+#eclipse
+.classpath
+.project
+.settings
+.cache
+bin/
+
+#OS X
+.DS_Store
+
+#H2 Db
+.db
