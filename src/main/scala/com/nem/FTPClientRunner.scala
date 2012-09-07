@@ -3,10 +3,9 @@ package com.nem
 import it.sauronsoftware.ftp4j._
 import it.sauronsoftware.ftp4j.connectors._
 import scala.io.Source._
-import io.{Codec, BufferedSource}
+import io.BufferedSource
 import java.nio.ByteBuffer
 import util.ILogger
-import org.slf4j.LoggerFactory
 
 case class FTPClientRunner(addressWithOutFileName: String,
                            port: Int,
