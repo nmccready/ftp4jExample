@@ -13,12 +13,17 @@ object Build extends sbt.Build {
     crossScalaVersions := Seq(V.thisScala, V.newerScala),
     scalacOptions := Seq("-deprecation", "-encoding", "utf8"),
     libraryDependencies ++= (compileDeps ++ testDeps),
-    testOptions in Test += Tests.Argument(TestFrameworks.Specs2, "junitxml", "console")
+    testOptions in Test += Tests.Argument(TestFrameworks.Specs2, "junitxml", "console"),
+    resolvers ++= Dependencies.resolutionRepos
   )
 }
 
 object Dependencies {
-
+  val resolutionRepos = Seq(
+    "TrafficLand Artifactory Server" at "http://build01.tl.com:8081/artifactory/repo",
+    "sonatype" at "http://oss.sonatype.org/content/repositories/releases",
+    "releases" at "http://oss.sonatype.org/content/repositories/releases"
+  )
   object GitHubUris {
     val ftp4j = uri("git://github.com/nmccready/ftp4j.git")
     //val ftp4j = file("../lib/ftp4j-1.7.2.jar")
@@ -30,6 +35,7 @@ object Dependencies {
     val specs2 = "1.12.1"
     val junit = "4.10"
     val ftp4j = "1.7.2"
+    val typeSafeConfig = "0.5.2"
     //Scala Versions
     val oldScala = "2.9.1"
     val thisScala = "2.9.2"
@@ -41,7 +47,8 @@ object Dependencies {
     "org.slf4j" % "slf4j-api" % V.slf4j,
     "org.specs2" %% "specs2" % V.specs2,
     "it.sauronsoftware" %% "ftp4j" % V.ftp4j
-      from "http://sourceforge.net/projects/ftp4j/files/ftp4j/1.7.2/ftp4j-1.7.2.zip/download"
+      from "http://sourceforge.net/projects/ftp4j/files/ftp4j/1.7.2/ftp4j-1.7.2.zip/download",
+    "com.typesafe" % "config" % V.typeSafeConfig
   )
 
   val testDeps: Seq[ModuleID] = Seq(
@@ -49,7 +56,8 @@ object Dependencies {
     "org.slf4j" % "slf4j-api" % V.slf4j,
     "org.specs2" %% "specs2" % V.specs2,
     "it.sauronsoftware" %% "ftp4j" % V.ftp4j
-      from "http://sourceforge.net/projects/ftp4j/files/ftp4j/1.7.2/ftp4j-1.7.2.zip/download"
+      from "http://sourceforge.net/projects/ftp4j/files/ftp4j/1.7.2/ftp4j-1.7.2.zip/download",
+    "com.typesafe" % "config" % V.typeSafeConfig
   )
 
   def withOld(namespace: String, version: String): String = appendAll(namespace, "_", version)

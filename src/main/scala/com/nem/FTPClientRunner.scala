@@ -7,13 +7,14 @@ import scala.io.Source._
 import io.BufferedSource
 import java.nio.ByteBuffer
 
-class FTPClientRunner(addressWithOutFileName: String,
-                      port: Int,
-                      imageFileName: String,
-                      user: String,
-                      password: String,
-                      proxyType: String,
-                       client: FTPClient) extends App {
+case class FTPClientRunner(addressWithOutFileName: String,
+                           port: Int,
+                           imageFileName: String,
+                           directory: String,
+                           user: String,
+                           password: String,
+                           proxyType: String,
+                           client: FTPClient) extends App {
   val maxAttempts = 5
   var isHealthy = true;
   private val logger: Logger = LoggerFactory.getLogger(this.getClass)
