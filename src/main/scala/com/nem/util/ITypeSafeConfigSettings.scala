@@ -23,6 +23,6 @@ trait ITypeSafeConfigSettings extends ILogger {
 }
 
 object TypeSafeConfig extends ITypeSafeConfigSettings {
-  protected val logger = createLogger(this.getClass)
+  protected val slf4jLogger = createLogger(this.getClass)
 }
 

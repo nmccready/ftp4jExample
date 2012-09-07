@@ -31,7 +31,7 @@ object Dependencies {
 
   object V {
     val master = "master"
-    val slf4j = "1.6.6"
+    val slf4s = "1.0.7"
     val specs2 = "1.12.1"
     val junit = "4.10"
     val ftp4j = "1.7.2"
@@ -44,7 +44,7 @@ object Dependencies {
 
   val compileDeps: Seq[ModuleID] = Seq(
     "junit" % "junit" % V.junit,
-    "org.slf4j" % "slf4j-api" % V.slf4j,
+    "com.weiglewilczek.slf4s" % withOld("slf4s",V.oldScala) % V.slf4s,
     "org.specs2" %% "specs2" % V.specs2,
     "it.sauronsoftware" %% "ftp4j" % V.ftp4j
       from "http://sourceforge.net/projects/ftp4j/files/ftp4j/1.7.2/ftp4j-1.7.2.zip/download",
@@ -53,7 +53,7 @@ object Dependencies {
 
   val testDeps: Seq[ModuleID] = Seq(
     "junit" % "junit" % V.junit,
-    "org.slf4j" % "slf4j-api" % V.slf4j,
+    "com.weiglewilczek.slf4s" % withOld("slf4s",V.oldScala) % V.slf4s,
     "org.specs2" %% "specs2" % V.specs2,
     "it.sauronsoftware" %% "ftp4j" % V.ftp4j
       from "http://sourceforge.net/projects/ftp4j/files/ftp4j/1.7.2/ftp4j-1.7.2.zip/download",

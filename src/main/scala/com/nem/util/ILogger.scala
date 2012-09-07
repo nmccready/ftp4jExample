@@ -1,11 +1,13 @@
 package com.nem.util
 
-import org.slf4j.{LoggerFactory, Logger}
+import org.slf4j.{LoggerFactory, Logger => jLogger}
+import com.weiglewilczek.slf4s._
 
-trait ILogger {
-  protected val logger: Logger
+trait ILogger extends Logger {
 
-  protected final def createLogger[T](cls: Class[T]): Logger = LoggerFactory.getLogger(cls)
+  def logger = slf4jLogger
+
+  protected final def createLogger[T](cls: Class[T]): jLogger = LoggerFactory.getLogger(cls)
 
   def buildThrowInfo(ex: Throwable, additonalInfo: String): String = {
     require(ex != null)
