@@ -5,7 +5,7 @@ import it.sauronsoftware.ftp4j.connectors._
 import scala.io.Source._
 import io.BufferedSource
 import java.nio.ByteBuffer
-import util.ILogger
+import org.slf4j.LoggerFactory
 
 case class FTPClientRunner(addressWithOutFileName: String,
                            port: Int,
@@ -14,16 +14,17 @@ case class FTPClientRunner(addressWithOutFileName: String,
                            user: String,
                            password: String,
                            proxyType: String,
-                           client: FTPClient) extends App with ILogger {
+                           maxAttempts: Int,
+                           connectSleepMilli: Int = 1000) {
 
-  protected val slf4jLogger = createLogger(getClass)
+  protected val logger = LoggerFactory.getLogger(getClass)
+  @volatile private var doConnect = false
 
-  val maxAttempts = 5
-  var isHealthy = true
-
-  def startOrRefreshClient() {
+  def startOrRefreshClient():FTPClient = {
+    doConnect = true
+    val client:FTPClient = new FTPClient()
     var currentConnAttempts = 0
-    var connect:() => Unit = null
+    var connect: () => Unit = null
     ConnectionProxyType.createConnectorFromString(proxyType, addressWithOutFileName, port,
       user, password) match {
       case Some(proxy) =>
@@ -31,50 +32,58 @@ case class FTPClientRunner(addressWithOutFileName: String,
       case None =>
         connect = () => {
           client.connect(addressWithOutFileName, port)
-          client.login(user,password)
+          client.login(user, password)
         }
     }
     try {
-      if (client.isConnected)
-        return
-      while (currentConnAttempts <= maxAttempts && !client.isConnected) {
-        currentConnAttempts += 1
-        connect.apply()
+      if (client.isConnected){
+        doConnect = false
+        return client
       }
-      if (client.isConnected)
-        isHealthy = true
-      if(!client.isConnected) {
-        isHealthy = false
+      while (currentConnAttempts <= maxAttempts && !client.isConnected && doConnect) {
+        currentConnAttempts += 1
+        try {
+          connect.apply()
+          doConnect = false
+        } catch {
+          case e: Exception =>
+        }
+        Thread.sleep(connectSleepMilli)
+      }
+      if (!client.isConnected){
+        doConnect = false
         throw new FtpJpegSourceException("Max connection attempts have been exceeded!")
       }
     }
     catch {
       case e: Exception =>
         val exception = e
-        error("FTP connection failure at addressWithOutFileName(%s) and port(%s)".
+        logger.error("FTP connection failure at addressWithOutFileName(%s) and port(%s)".
           format(addressWithOutFileName, port.toString),
           exception)
     }
+    client
   }
 
-  protected def forceConnectionStop() {
+  protected def forceConnectionStop(client:FTPClient) {
     //set time on disconnect, if time out call disconnect false (exit ungraceful)
     client.disconnect(true)
-    debug("ftp connection force stopped.")
+    logger.debug("ftp connection force stopped.")
   }
 
   def retrieveImage(): ByteBuffer = {
-    if (!client.isConnected)
-      startOrRefreshClient()
+      val client = startOrRefreshClient()
     if (!client.isConnected || !client.isAuthenticated)
       return null
 
     var optSource: Option[BufferedSource] = None
+    var downloadFile: Option[java.io.File] = None
     try {
-      val downloadFile = new java.io.File(imageFileName)
-      client.changeDirectory(directory)
-      client.download(imageFileName, downloadFile)
-      optSource = Some(fromFile(downloadFile,"latin1"))
+      downloadFile = Some(new java.io.File(imageFileName))
+      if (directory != "" && directory != null)
+        client.changeDirectory(directory)
+      client.download(imageFileName, downloadFile.get)
+      optSource = Some(fromFile(downloadFile.get, "latin1"))
       optSource match {
         case Some(source) =>
           val fileAsBytes = source.map(_.toByte).toArray
@@ -86,19 +95,23 @@ case class FTPClientRunner(addressWithOutFileName: String,
     catch {
       case e: Exception =>
         val ex = e
-        error("Exception! Error downloading image. ", ex)
-        Console.println("Exception! Error downloading image. " +  ex.getMessage)
+        logger.error("Exception! Error downloading image. ", ex)
+        Console.println("Exception! Error downloading image. " + ex.getMessage)
         null
     }
     finally {
+      if (client.isConnected)
+        this.forceConnectionStop(client)
       optSource match {
         case Some(source) => source.close()
         case None => null
       }
+      downloadFile match {
+        case Some(file) => file.delete()
+        case None => null
+      }
     }
   }
-
-
 }
 
 case class FtpJpegSourceException(message: String, exception: Option[Exception]) extends Exception(message) {
@@ -110,8 +123,8 @@ case class FtpJpegSourceException(message: String, exception: Option[Exception])
     super.setStackTrace(exception.get.getStackTrace)
 }
 
-object ConnectionProxyType extends ILogger {
-  protected val slf4jLogger = createLogger(getClass)
+object ConnectionProxyType {
+  protected val logger = LoggerFactory.getLogger(getClass)
 
   final val none = "none"
   final val http = "http"
@@ -128,8 +141,9 @@ object ConnectionProxyType extends ILogger {
       case ConnectionProxyType.socks5 => Some(new SOCKS5Connector(address, port, userName, password))
       case ConnectionProxyType.none => None
       case unknown =>
-        error("Uknown Connection Proxy Type " + unknown)
+        logger.error("Uknown Connection Proxy Type " + unknown)
         None
     }
   }
 }
+

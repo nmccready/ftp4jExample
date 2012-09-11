@@ -14,7 +14,7 @@ class Ftp4JDownloadSpec() extends Specification with IFtp4jSpec {
   val port = TypeSafeConfig.settings[Int](fileName, "port").get
 
   val runner: FTPClientRunner = FTPClientRunner(address, port, file, directory,
-    username, password, "none", new FTPClient())
+    username, password, "none",5)
 
   override def is =
     args(sequential = true) ^
@@ -27,13 +27,13 @@ class Ftp4JDownloadSpec() extends Specification with IFtp4jSpec {
       end
 
   def test1_connected = {
-    runner.startOrRefreshClient()
-    runner.client.isConnected
+    val client = runner.startOrRefreshClient()
+    client.isConnected
   }
 
   def test2_authenticated = {
-    runner.startOrRefreshClient()
-    runner.client.isAuthenticated
+    val client = runner.startOrRefreshClient()
+    client.isAuthenticated
   }
 
   def test3_download = {
