@@ -120,6 +120,7 @@ case class FTPClientRunner(addressWithOutFileName: String,
     finally {
       if (client.isConnected)
         askServerForDisconnect(client)
+      outputStream.close()
       true
     }
     if (byteBuffer == null) {
