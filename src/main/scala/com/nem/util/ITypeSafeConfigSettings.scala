@@ -9,7 +9,8 @@ trait ITypeSafeConfigSettings extends ILogger {
     try {
       val config = ConfigFactory.parseFile(new File(methodFileName))
       val resolved = config.resolve
-      TypeHelper.cast[R](resolved.getAnyRef(system))
+      val someObj = resolved.getAnyRef(system)
+      TypeHelper.cast[R](someObj)
     }
     catch {
       case fe: FileNotFoundException =>

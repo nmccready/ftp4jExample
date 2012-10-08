@@ -6,6 +6,7 @@ import scala.io.Source._
 import io.BufferedSource
 import java.nio.ByteBuffer
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayOutputStream
 
 case class FTPClientRunner(addressWithOutFileName: String,
                            port: Int,
@@ -15,14 +16,21 @@ case class FTPClientRunner(addressWithOutFileName: String,
                            password: String,
                            proxyType: String,
                            maxAttempts: Int,
-                           connectSleepMilli: Int = 1000) {
+                           mode: String = "passive",
+                           noopTimeout: Int = -1,
+                           retryDownloadMaxCount: Int = 1,
+                           connectSleepMilli: Int = 1000
+                            ) {
 
   protected val logger = LoggerFactory.getLogger(getClass)
   @volatile private var doConnect = false
 
-  def startOrRefreshClient():FTPClient = {
+  def startAndGetClient(): FTPClient = {
     doConnect = true
-    val client:FTPClient = new FTPClient()
+    val client: FTPClient = new FTPClient()
+    if (mode == "active")
+      client.setPassive(false)
+    client.setAutoNoopTimeout(noopTimeout)
     var currentConnAttempts = 0
     var connect: () => Unit = null
     ConnectionProxyType.createConnectorFromString(proxyType, addressWithOutFileName, port,
@@ -36,7 +44,7 @@ case class FTPClientRunner(addressWithOutFileName: String,
         }
     }
     try {
-      if (client.isConnected){
+      if (client.isConnected) {
         doConnect = false
         return client
       }
@@ -50,9 +58,9 @@ case class FTPClientRunner(addressWithOutFileName: String,
         }
         Thread.sleep(connectSleepMilli)
       }
-      if (!client.isConnected){
+      if (!client.isConnected) {
         doConnect = false
-        throw new FtpJpegSourceException("Max connection attempts have been exceeded!")
+        throw new FtpJpegClientRunnerException("Max connection attempts have been exceeded!")
       }
     }
     catch {
@@ -65,32 +73,42 @@ case class FTPClientRunner(addressWithOutFileName: String,
     client
   }
 
-  protected def forceConnectionStop(client:FTPClient) {
+  protected def forceDisconnect(client: FTPClient) {
     //set time on disconnect, if time out call disconnect false (exit ungraceful)
-    client.disconnect(true)
+    client.disconnect(false)
     logger.debug("ftp connection force stopped.")
   }
 
-  def retrieveImage(): ByteBuffer = {
-      val client = startOrRefreshClient()
+  protected def askServerForDisconnect(client: FTPClient) {
+    try {
+      client.disconnect(true)
+    }
+    catch {
+      case exception: Exception =>
+        logger.debug("ftp connection failed to stop gracefully. Now forcefully stopping connection.")
+        forceDisconnect(client)
+    }
+  }
+
+  def retrieveImage(): ByteBuffer = retrieveImage(0)
+
+  def retrieveImage(attempt: Int): ByteBuffer = {
+    if (attempt >= retryDownloadMaxCount)
+      return null
+    else if (attempt > 0)
+      logger.debug("Retrieve image attempt failed, retrying...")
+
+    val client = startAndGetClient()
     if (!client.isConnected || !client.isAuthenticated)
       return null
-
-    var optSource: Option[BufferedSource] = None
-    var downloadFile: Option[java.io.File] = None
-    try {
-      downloadFile = Some(new java.io.File(imageFileName))
+    var byteBuffer: ByteBuffer = null
+    val outputStream = new ByteArrayOutputStream()
+    byteBuffer = try {
       if (directory != "" && directory != null)
         client.changeDirectory(directory)
-      client.download(imageFileName, downloadFile.get)
-      optSource = Some(fromFile(downloadFile.get, "latin1"))
-      optSource match {
-        case Some(source) =>
-          val fileAsBytes = source.map(_.toByte).toArray
-          ByteBuffer.wrap(fileAsBytes)
-        case None =>
-          null
-      }
+      client.setType(FTPClient.TYPE_BINARY)
+      client.download(imageFileName, outputStream, 0, null)
+      ByteBuffer.wrap(outputStream.toByteArray)
     }
     catch {
       case e: Exception =>
@@ -101,23 +119,20 @@ case class FTPClientRunner(addressWithOutFileName: String,
     }
     finally {
       if (client.isConnected)
-        this.forceConnectionStop(client)
-      optSource match {
-        case Some(source) => source.close()
-        case None => null
-      }
-      downloadFile match {
-        case Some(file) => file.delete()
-        case None => null
-      }
+        askServerForDisconnect(client)
+      true
     }
+    if (byteBuffer == null) {
+      byteBuffer = retrieveImage(attempt + 1)
+    }
+    byteBuffer
   }
 }
 
-case class FtpJpegSourceException(message: String, exception: Option[Exception]) extends Exception(message) {
-  def this(exception: Exception) = this("FtpJpegSourceException: " + exception.getMessage, Some(exception))
+case class FtpJpegClientRunnerException(message: String, exception: Option[Exception]) extends Exception(message) {
+  def this(exception: Exception) = this("FtpJpegClientRunnerException: " + exception.getMessage, Some(exception))
 
-  def this(message: String) = this("FtpJpegSourceException: " + message, None)
+  def this(message: String) = this("FtpJpegClientRunnerException: " + message, None)
 
   if (exception.isDefined)
     super.setStackTrace(exception.get.getStackTrace)
@@ -146,4 +161,3 @@ object ConnectionProxyType {
     }
   }
 }
-

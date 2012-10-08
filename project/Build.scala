@@ -20,7 +20,7 @@ object Build extends sbt.Build {
 
 object Dependencies {
   val resolutionRepos = Seq(
-    "TrafficLand Artifactory Server" at "http://build01.tl.com:8081/artifactory/repo",
+    "akkaRekeases" at "http://repo.akka.io/releases",
     "sonatype" at "http://oss.sonatype.org/content/repositories/releases",
     "releases" at "http://oss.sonatype.org/content/repositories/releases"
   )
@@ -36,6 +36,7 @@ object Dependencies {
     val junit = "4.10"
     val ftp4j = "1.7.2"
     val typeSafeConfig = "0.5.2"
+    val akka = "2.0.3"
     //Scala Versions
     val oldScala = "2.9.1"
     val thisScala = "2.9.2"
@@ -48,7 +49,8 @@ object Dependencies {
     "org.specs2" %% "specs2" % V.specs2,
     "it.sauronsoftware" %% "ftp4j" % V.ftp4j
       from "http://sourceforge.net/projects/ftp4j/files/ftp4j/1.7.2/ftp4j-1.7.2.zip/download",
-    "com.typesafe" % "config" % V.typeSafeConfig
+    "com.typesafe" % "config" % V.typeSafeConfig,
+    "com.typesafe.akka" % "akka-actor" % V.akka
   )
 
   val testDeps: Seq[ModuleID] = Seq(
@@ -57,7 +59,8 @@ object Dependencies {
     "org.specs2" %% "specs2" % V.specs2,
     "it.sauronsoftware" %% "ftp4j" % V.ftp4j
       from "http://sourceforge.net/projects/ftp4j/files/ftp4j/1.7.2/ftp4j-1.7.2.zip/download",
-    "com.typesafe" % "config" % V.typeSafeConfig
+    "com.typesafe" % "config" % V.typeSafeConfig,
+    "com.typesafe.akka" % "akka-actor" % V.akka
   )
 
   def withOld(namespace: String, version: String): String = appendAll(namespace, "_", version)
